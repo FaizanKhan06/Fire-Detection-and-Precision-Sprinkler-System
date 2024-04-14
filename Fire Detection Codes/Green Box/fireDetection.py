@@ -1,4 +1,4 @@
-import cv2         # Library for openCV
+import cv2         # Library for open_cv
 
 fire_cascade = cv2.CascadeClassifier('fire_detection_cascade_model.xml') # To access xml file which includes positive and negative images of fire. (Trained images)
                                                                          # File is also provided with the code.
