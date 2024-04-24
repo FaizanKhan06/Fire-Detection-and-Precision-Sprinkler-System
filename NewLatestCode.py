@@ -5,8 +5,6 @@ from email.mime.text import MIMEText
 from gpiozero import AngularServo
 from gpiozero.pins.pigpio import PiGPIOFactory
 import RPi.GPIO as GPIO
-import picamera
-import picamera.array
 
 class StateMachine:
     def __init__(self):
@@ -195,18 +193,23 @@ def main():
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
     # Open the camera
-    camera = picamera.PiCamera()
-    camera.resolution = (320, 240)
-    camera.framerate = 10
+    cap = cv2.VideoCapture(0)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+    cap.set(cv2.CAP_PROP_FPS, 10)
 
     print("Current State:", sm.get_state())
 
-    for _ in camera.capture_continuous(picamera.array.PiRGBArray(camera), format='bgr', use_video_port=True):
+    while True:
         # Capture frame-by-frame
-        output = _.array
+        ret, frame = cap.read()
+
+        if not ret:
+            print("Failed to capture frame")
+            break
 
         # Vertically flip the frame
-        frame = cv2.flip(output, 0)
+        frame = cv2.flip(frame, 0)
 
         height, width, _ = frame.shape
 
@@ -268,7 +271,7 @@ def main():
             break
 
     # Release the camera and close OpenCV windows
-    camera.close()
+    cap.release()
     cv2.destroyAllWindows()
     GPIO.cleanup()
 
