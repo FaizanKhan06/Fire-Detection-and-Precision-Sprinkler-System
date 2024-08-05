@@ -20,10 +20,10 @@ class StateMachine:
 
     def send_email(self):
         print("Sending email")
-        """
+        
         sender_email = "1hk20cs045@hkbk.edu.in"  # Replace with your email
         receiver_email = "faizankhanm062002@gmail.com"  # Replace with recipient email
-        password = "cs205554"  # Replace with your email password
+        password = "cs50264"  # Replace with your email password
         
         subject = "Fire detected!"
         body = "A fire has been detected. Please take action."
@@ -37,7 +37,7 @@ class StateMachine:
         server.login(sender_email, password)
         server.send_message(msg)
         server.quit()
-        """
+        
 
     def transition(self, event):
         current_time = time.time()
