@@ -11,11 +11,11 @@ class StateMachine:
         self.state = "Finding State"
         self.last_state_change_time = time.time()
         self.total_frames = 0
-        self.face_detected_frames = 0
+        self.fire_detected_frames = 0
         self.found_state_duration = 5  # Duration for staying in Found State
         self.emailing_state_duration = 10  # Duration for staying in Emailing State
         self.extinguishing_state_duration = 5  # Duration for staying in Start Extinguishing State
-        self.face_percent_min = 10  # Minimum face percentage to start extinguisher
+        self.fire_percent_min = 10  # Minimum fire percentage to start extinguisher
         self.email_sent = False
 
     def send_email(self):
@@ -25,8 +25,8 @@ class StateMachine:
         receiver_email = "faizankhanm062002@gmail.com"  # Replace with recipient email
         password = "cs205554"  # Replace with your email password
         
-        subject = "Face detected!"
-        body = "A face has been detected. Please take action."
+        subject = "Fire detected!"
+        body = "A fire has been detected. Please take action."
         
         msg = MIMEText(body)
         msg['Subject'] = subject
@@ -44,16 +44,16 @@ class StateMachine:
         elapsed_time = current_time - self.last_state_change_time
 
         if self.state == "Finding State":
-            if event == "Face Found":
+            if event == "Fire Found":
                 self.state = "Found State"
                 print("Current State: " + self.state) # print
                 self.last_state_change_time = current_time
         elif self.state == "Found State":
             if elapsed_time >= self.found_state_duration:
                 if self.total_frames > 0:
-                    percentage = (self.face_detected_frames / self.total_frames) * 100
-                    print("Percentage of frames with face detected:", percentage)
-                    if percentage < self.face_percent_min:
+                    percentage = (self.fire_detected_frames / self.total_frames) * 100
+                    print("Percentage of frames with fire detected:", percentage)
+                    if percentage < self.fire_percent_min:
                         self.state = "Finding State"
                         print("Current State: " + self.state) # print
                     else:
@@ -67,8 +67,8 @@ class StateMachine:
                 self.last_state_change_time = current_time
             else:
                 self.total_frames += 1
-                if event == "Face Found":
-                    self.face_detected_frames += 1
+                if event == "Fire Found":
+                    self.fire_detected_frames += 1
         elif self.state == "Emailing State":
             if elapsed_time >= self.emailing_state_duration:
                 self.state = "Start Extinguishing State"
@@ -86,7 +86,7 @@ class StateMachine:
                 print("Current State: " + self.state) # print
                 self.last_state_change_time = current_time
                 self.total_frames = 0
-                self.face_detected_frames = 0
+                self.fire_detected_frames = 0
 
     def get_state(self):
         return self.state
@@ -123,16 +123,16 @@ class Servos:
 
         return int(mapped_value)
 
-    def point_motion(self, face_center_x, face_center_y):
+    def point_motion(self, fire_center_x, fire_center_y):
         #pan Servo Movement
-        if not(-10 <= face_center_x <= 10):
-            result = 1 if face_center_x > 0 else -1
-            self.pan_servo_angle += (self.map_value(face_center_x*result, 5, 160, 1, 10) * result)
+        if not(-10 <= fire_center_x <= 10):
+            result = 1 if fire_center_x > 0 else -1
+            self.pan_servo_angle += (self.map_value(fire_center_x*result, 5, 160, 1, 10) * result)
 
         #tilt Servo Movement
-        if not(-10 <= face_center_y <= 10):
-            result = 1 if face_center_y > 0 else -1
-            self.tilt_servo_angle += (self.map_value(face_center_y*result, 5, 120, 1, 10) * result)
+        if not(-10 <= fire_center_y <= 10):
+            result = 1 if fire_center_y > 0 else -1
+            self.tilt_servo_angle += (self.map_value(fire_center_y*result, 5, 120, 1, 10) * result)
 
         self.move_pan_servo()
         self.move_tilt_servo()
@@ -183,14 +183,14 @@ class Other_components:
         GPIO.output(24, GPIO.LOW)
 
 def main():
-    global face_center_x, face_center_y
+    global fire_center_x, fire_center_y
     # Initialize state machine
     sm = StateMachine()
     servo = Servos()
     other_components = Other_components()
 
-    # Load pre-trained Haar Cascade classifier for face detection
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    # Load pre-trained Haar Cascade classifier for fire detection
+    fire_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalfire_default.xml")
 
     # Open the camera
     cap = cv2.VideoCapture(0)
@@ -213,15 +213,15 @@ def main():
 
         height, width, _ = frame.shape
 
-        # Convert frame to grayscale for face detection
+        # Convert frame to grayscale for fire detection
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Detect faces in the grayscale frame
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+        # Detect fires in the grayscale frame
+        fires = fire_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
 
-        # If faces are found, trigger "Face Found" event
-        if len(faces) > 0:
-            sm.transition("Face Found")
+        # If fires are found, trigger "Fire Found" event
+        if len(fires) > 0:
+            sm.transition("Fire Found")
 
         # Check for state transition to "Start Extinguishing State"
         if sm.get_state() == "Found State":
@@ -235,16 +235,16 @@ def main():
         if sm.get_state() == "Start Extinguishing State":
             sm.transition("Timeout")
                 
-        # Draw rectangles around detected faces
-        for (x, y, w, h) in faces:
+        # Draw rectangles around detected fires
+        for (x, y, w, h) in fires:
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
             center_x = x + w // 2
             center_y = y + h // 2
             cv2.circle(frame, (center_x, center_y), 5, (255, 0, 0), -1)
 
-            face_center_x = (center_x - width//2)*1
-            face_center_y = (center_y - height//2)*-1
-            #coordinates_text = f"({face_center_x}, {face_center_y})"
+            fire_center_x = (center_x - width//2)*1
+            fire_center_y = (center_y - height//2)*-1
+            #coordinates_text = f"({fire_center_x}, {fire_center_y})"
             #cv2.putText(frame, coordinates_text, (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 1)
 
         #State Management
@@ -252,14 +252,14 @@ def main():
             servo.sweep_motion()
             other_components.stop_buzzer_and_waterpump()
         if sm.get_state() == "Found State" or sm.get_state() == "Start Extinguishing State" or sm.get_state() == "Emailing State":
-            servo.point_motion(face_center_x, face_center_y)
+            servo.point_motion(fire_center_x, fire_center_y)
             if sm.get_state() == "Start Extinguishing State":
                 other_components.start_buzzer_and_waterpump()
 
         cv2.putText(frame, sm.get_state(), (20,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         # Display the frame
-        cv2.imshow('Face Detection', frame)
+        cv2.imshow('Fire Detection', frame)
 
         # Check for key press "s" to transition back to "Finding State" from "Emailing State"
         key = cv2.waitKey(1)
@@ -275,8 +275,8 @@ def main():
     cv2.destroyAllWindows()
     GPIO.cleanup()
 
-face_center_x = 0
-face_center_y = 0
+fire_center_x = 0
+fire_center_y = 0
 
 if __name__ == "__main__":
     main()
